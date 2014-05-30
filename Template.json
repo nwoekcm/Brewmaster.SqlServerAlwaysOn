@@ -315,6 +315,7 @@
                             }
                         },
                         "ConfigSets": [
+							"QuorumServer",
                             "SSAONode",
                             "FailoverCluster"
                         ],
@@ -330,13 +331,88 @@
                         "AvailabilitySet": "sqlha-avs",
                         "OsVirtualDisk": {
                             "OsType": "Windows",
-                            "OsImageName": "fb83b3509582419d99629ce476bcb5c8__*SQL-Server-2014*ENT*"
+                            "OsImageName": "sql-ent-20140511"
                         },
                         "DataVirtualDisks": [
-                            {
+							{
                                 "DiskId": "disk0",
                                 "Lun": 0,
-                                "LogicalSizeInGB": 40
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk1",
+                                "Lun": 1,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk2",
+                                "Lun": 2,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk3",
+                                "Lun": 3,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk4",
+                                "Lun": 4,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk5",
+                                "Lun": 5,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk6",
+                                "Lun": 6,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk7",
+                                "Lun": 7,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk8",
+                                "Lun": 8,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk9",
+                                "Lun": 9,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk10",
+                                "Lun": 10,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk11",
+                                "Lun": 11,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk12",
+                                "Lun": 12,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk13",
+                                "Lun": 13,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk14",
+                                "Lun": 14,
+                                "LogicalSizeInGB": 1023
+                            },
+							{
+                                "DiskId": "disk15",
+                                "Lun": 15,
+                                "LogicalSizeInGB": 1023
                             }
                         ],
                         "WindowsConfigSet": {
@@ -367,13 +443,13 @@
             "Name": "ADForest",
             "Description": "Must fully deploy AD forest root before any other domain controllers or domain VMs."
         },
-        {
-            "Name": "SqlAlwaysOn",
-            "Description": "SQL AlwaysOn VMs."
-        },
 		{
             "Name": "ADDomainController",
             "Description": "Additional AD domain controllers."
+        },
+        {
+            "Name": "SqlAlwaysOn",
+            "Description": "SQL AlwaysOn VMs."
         }
     ],
     "Credentials": [
@@ -411,7 +487,15 @@
                 "SetupADNode",
                 "SetupADDomainController"
             ]
-        },        
+        },
+		{
+			"Name": "QuorumServer",
+			"Description":  "Quorum server specific configuration",
+			"Endpoints": [],
+			"ConfigurationIds": [
+				"ConfigureQuorum"
+			]
+		},
         {
             "Name": "SSAONode",
             "Description": "All VMs within the SqlAlwaysOn deployment. This is typically made of the SQL nodes and a single quorum node.",
@@ -573,12 +657,12 @@
                     ]
                 }
             ]
-        },        
-        {
-            "Name": "InitializeSSAONode",
-            "Description": "Initializes VMs in the SqlServerAlwaysOn cloud service",
-            "Resources": [
-                {
+        },
+		{
+			"Name": "ConfigureQuorum",
+			"Description": "Configures the Quorum server and share",
+			"Resources": [
+				{
                     "Type": "xFormatDisks",
                     "ImportModule": "xAzureDataDisks",
                     "ImportTypeName": "ADITI_xFormatDisks",
@@ -587,6 +671,53 @@
                         "FirstDriveLetter": "F"
                     }
                 },
+				{
+                    "Type": "File",
+                    "ImportModule": null,
+                    "ImportTypeName": null,
+                    "Name": "CreateBackupFolder",
+                    "Args": {
+                        "DestinationPath": "F:\\backup",
+                        "Type": "Directory",
+                        "Ensure": "Present",
+                        "Force": "False"
+                    }
+                },
+                {
+                    "Type": "File",
+                    "ImportModule": null,
+                    "ImportTypeName": null,
+                    "Name": "CreateQuorumFolder",
+                    "Args": {
+                        "DestinationPath": "F:\\quorum",
+                        "Type": "Directory",
+                        "Ensure": "Present",
+                        "Force": "False"
+                    }
+                },
+				{
+                    "Type": "xSmbShare",
+                    "ImportModule": "xSmbShare",
+                    "ImportTypeName": "MSFT_xSmbShare",
+                    "Name": "CreateBackupShare",
+                    "Args": {
+                        "Name": "backup",
+                        "Path": "F:\\backup",
+                        "FullAccess": "everyone",
+                        "Ensure": "Present",
+                        "Description": "Database [{{DatabaseName}}] backup folder"
+                    },
+                    "Requires": [
+                        "[File]CreateQuorumFolder"
+                    ],
+                    "Description": null
+                }
+			]
+		},
+        {
+            "Name": "InitializeSSAONode",
+            "Description": "Initializes VMs in the SqlServerAlwaysOn cloud service",
+            "Resources": [
                 {
                     "Type": "WindowsFeature",
                     "ImportModule": null,
@@ -677,56 +808,6 @@
                     "Requires": [
                         "[WindowsFeature]RSATADPowershell"
                     ]
-                },
-                {
-                    "Type": "File",
-                    "ImportModule": null,
-                    "ImportTypeName": null,
-                    "Name": "CreateBackupFolder",
-                    "Args": {
-                        "DestinationPath": "F:\\backup",
-                        "Type": "Directory",
-                        "Ensure": "Present",
-                        "Force": "False"
-                    },
-                    "Nodes": [
-                        "{{SSAOCloudService}}.quorum"
-                    ]
-                },
-                {
-                    "Type": "File",
-                    "ImportModule": null,
-                    "ImportTypeName": null,
-                    "Name": "CreateQuorumFolder",
-                    "Args": {
-                        "DestinationPath": "F:\\quorum",
-                        "Type": "Directory",
-                        "Ensure": "Present",
-                        "Force": "False"
-                    },
-                    "Nodes": [
-                        "{{SSAOCloudService}}.quorum"
-                    ]
-                },
-                {
-                    "Type": "xSmbShare",
-                    "ImportModule": "xSmbShare",
-                    "ImportTypeName": "MSFT_xSmbShare",
-                    "Name": "CreateBackupShare",
-                    "Args": {
-                        "Name": "backup",
-                        "Path": "F:\\backup",
-                        "FullAccess": "everyone",
-                        "Ensure": "Present",
-                        "Description": "Database [{{DatabaseName}}] backup folder"
-                    },
-                    "Nodes": [
-                        "{{SSAOCloudService}}.quorum"
-                    ],
-                    "Requires": [
-                        "[File]CreateQuorumFolder"
-                    ],
-                    "Description": null
                 },
                 {
                     "Credential": "DomainAdmin:local",
